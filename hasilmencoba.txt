@@ -1,0 +1,39 @@
+
+
+Query kamu: tampilkan semua brand dari dim_brand
+
+Agent sedang memproses...
+
+════════════════════════════════════════════════════════════════════════════════
+Hasil dari agent:
+❌ Output bukan JSON valid
+Output mentah dari agent:
+```json
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "dim_brand"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "brand_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "dim_brand",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "brand_name",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "dim_brand",
+        "type": "column"
+      }
+    }
+  ]
+}
+```
+
+Error parse: Expecting value: line 1 column 1 (char 0)
+════════════════════════════════════════════════════════════════════════════════
