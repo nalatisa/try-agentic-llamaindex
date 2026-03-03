@@ -747,9 +747,9 @@ RAW RESULT OBJECT:
 }
 ══════════════════════════════════════════════════════════════════════════════════════════
 
-#selasa 3 maret
+#selasa-3-maret
 
-Query kamu: tampilkan tiga amount data teratas di fact_transaction
+Query: tampilin 3 data teratas data amount
 
 Agent sedang memproses...
 
@@ -786,7 +786,7 @@ IR DISIMPAN:
 }
 ════════════════════════════════════════════════════════════════════════════════
 
-Query kamu: tampilin satu data aja deh
+Query: tampilin satu aja data teratas
 
 Agent sedang memproses...
 
@@ -828,7 +828,7 @@ IR UPDATED:
 }
 ════════════════════════════════════════════════════════════════════════════════
 
-Query kamu: tampilkan seluruh data brand
+Query: tampilkan seluruh data brand
 
 Agent sedang memproses...
 
@@ -862,7 +862,91 @@ IR DISIMPAN:
 }
 ════════════════════════════════════════════════════════════════════════════════
 
-Query kamu: data amount tadi tampilin 5 terbawah
+Query: history
+
+=== IR HISTORY ===
+
+[0]
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "total_amount",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    }
+  ],
+  "order_by": [
+    {
+      "column": "total_amount",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "fact_transaction",
+      "asc": false
+    }
+  ],
+  "limit": 3
+}
+
+[1]
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "total_amount",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    }
+  ],
+  "order_by": [
+    {
+      "column": "total_amount",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "fact_transaction",
+      "asc": false
+    }
+  ],
+  "limit": 1
+}
+
+Current IR:
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "dim_brand"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "brand_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "dim_brand",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "brand_name",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "dim_brand",
+        "type": "column"
+      }
+    }
+  ]
+}
+
+Query: tampilin data amount sebelumnya dua teratas aja
 
 Agent sedang memproses...
 
@@ -871,34 +955,16 @@ INFO:google_genai.models:AFC is enabled with max remote calls: 10.
 INFO:google_genai.models:AFC is enabled with max remote calls: 10.
 ════════════════════════════════════════════════════════════════════════════════
 DIFF DITERIMA:
-@@ -27,4 +27,20 @@
+@@ -16,4 +16,5 @@
          "table": "dim_brand",
          "type": "column"
        }
 -    }
 +    },
-+    {
-+      "expr": {
-+        "column": "brand_id",
-+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
-+        "table": "dim_brand",
-+        "type": "column"
-+      },
-+      "direction": "asc"
-+    }
-+  ],
-+  "order_by": [
-+    {
-+      "expr": {
-+        "column": "brand_id",
-+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
-+        "table": "dim_brand",
-+        "type": "column"
-+      },
-+      "direction": "asc"
-+    }
-+  ],
-+  "limit": 5
++    { "limit": 2 }
+   ]
+ }
+\ No newline at end of file
 ════════════════════════════════════════════════════════════════════════════════
 ════════════════════════════════════════════════════════════════════════════════
 IR UPDATED:
@@ -924,14 +990,6 @@ IR UPDATED:
         "type": "column"
       }
     }
-  ],
-  "expr": "{",
-  "column": "brand_id",
-  "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
-  "table": "dim_brand",
-  "type": "column",
-  "direction": "asc",
-  "order_by": "[",
-  "limit": 5
+  ]
 }
 ════════════════════════════════════════════════════════════════════════════════
