@@ -37,3 +37,901 @@ Output mentah dari agent:
 
 Error parse: Expecting value: line 1 column 1 (char 0)
 ════════════════════════════════════════════════════════════════════════════════
+
+#2
+Query kamu: tampilkan seluruh total transaksi per customer di fact_transaction
+
+Agent sedang memproses...
+
+══════════════════════════════════════════════════════════════════════════════════════════
+Hasil dari agent (setelah dibersihkan):
+JSON IR VALID:
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "customer_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "arg": {
+          "column": "total_amount",
+          "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+          "table": "fact_transaction",
+          "type": "column"
+        },
+        "func": "sum",
+        "type": "aggregate"
+      },
+      "alias": "total_transactions"
+    }
+  ],
+  "group_by": [
+    {
+      "column": "customer_id",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "fact_transaction",
+      "type": "column"
+    }
+  ]
+}
+
+✓ Valid sesuai schema Pydantic
+══════════════════════════════════════════════════════════════════════════════════════════
+
+
+Query kamu: customer apa yang punya total terbanyak?
+
+Agent sedang memproses...
+
+══════════════════════════════════════════════════════════════════════════════════════════
+Hasil dari agent (setelah dibersihkan):
+JSON IR VALID:
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "joins": [
+    {
+      "type": "inner",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "dim_customer",
+      "on": [
+        {
+          "left": {
+            "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+            "table": "fact_transaction",
+            "column": "customer_id"
+          },
+          "right": {
+            "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+            "table": "dim_customer",
+            "column": "customer_id"
+          }
+        }
+      ]
+    }
+  ],
+  "select": [
+    {
+      "expr": {
+        "type": "column",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "dim_customer",
+        "column": "customer_name"
+      }
+    },
+    {
+      "expr": {
+        "type": "aggregate",
+        "func": "sum",
+        "arg": {
+          "type": "column",
+          "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+          "table": "fact_transaction",
+          "column": "total_amount"
+        }
+      },
+      "alias": "total_amount_spent"
+    }
+  ],
+  "group_by": [
+    {
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "dim_customer",
+      "column": "customer_name"
+    }
+  ],
+  "order_by": [
+    {
+      "alias": "total_amount_spent",
+      "asc": false
+    }
+  ],
+  "limit": 1
+}
+
+✓ Valid sesuai schema Pydantic
+══════════════════════════════════════════════════════════════════════════════════════════
+
+#3
+(try-agent-llamaindex) afni@afni:~/try-agent-llamaindex$ uv run python agent.py
+DEBUG:httpcore.connection:connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=None socket_options=None
+DEBUG:httpcore.connection:connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x7b0350200620>
+DEBUG:httpcore.connection:start_tls.started ssl_context=<ssl.SSLContext object at 0x7b03503fbf50> server_hostname='generativelanguage.googleapis.com' timeout=None
+DEBUG:httpcore.connection:start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x7b035057df40>
+DEBUG:httpcore.http11:send_request_headers.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:send_request_headers.complete
+DEBUG:httpcore.http11:send_request_body.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:send_request_body.complete
+DEBUG:httpcore.http11:receive_response_headers.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Mon, 02 Mar 2026 08:15:59 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=32'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+INFO:httpx:HTTP Request: GET https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash "HTTP/1.1 200 OK"
+DEBUG:httpcore.http11:receive_response_body.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:receive_response_body.complete
+DEBUG:httpcore.http11:response_closed.started
+DEBUG:httpcore.http11:response_closed.complete
+DEBUG:asyncio:Using selector: EpollSelector
+╔════════════════════════════════════════════════════════════╗
+║ Semesta IR Builder Agent – Gemini 2.5 Flash (DEBUG MODE)   ║
+║                                                            ║
+║ Ketik 'exit' untuk berhenti                                ║
+╚════════════════════════════════════════════════════════════╝
+
+Query kamu: tampilkan data pada fact_transaction dan tampilkan lima data total terbanyak
+
+Agent sedang memproses...
+
+
+🔥 TOOL DIPANGGIL 🔥 source_id=d4df49c4-0fcd-4145-b852-ff889d3e4842
+
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:8001
+DEBUG:urllib3.connectionpool:http://127.0.0.1:8001 "GET /schema?source_id=d4df49c4-0fcd-4145-b852-ff889d3e4842 HTTP/1.1" 200 631
+
+🧠 RAW RESULT OBJECT:
+```json
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "transaction_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "date_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "customer_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "product_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "quantity",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "total_amount",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    }
+  ],
+  "order_by": [
+    {
+      "column": "total_amount",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "fact_transaction",
+      "asc": false
+    }
+  ],
+  "limit": 5
+}
+```
+
+══════════════════════════════════════════════════════════════════════════════════════════
+⚠️ Hasil fallback (bukan objek IRQuery):
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "transaction_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "date_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "customer_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "product_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "quantity",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "total_amount",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    }
+  ],
+  "order_by": [
+    {
+      "column": "total_amount",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "fact_transaction",
+      "asc": false
+    }
+  ],
+  "limit": 5
+}
+══════════════════════════════════════════════════════════════════════════════════════════
+
+Query kamu: apa anam product_id yang memiliki transaksi terbanyak?
+
+Agent sedang memproses...
+
+
+🔥 TOOL DIPANGGIL 🔥 source_id=d4df49c4-0fcd-4145-b852-ff889d3e4842
+
+
+🔥 TOOL DIPANGGIL 🔥 source_id=0ff6daa0-ac80-4e28-87b3-a7fd5cc8eb38
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:8001
+
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:8001
+DEBUG:urllib3.connectionpool:http://127.0.0.1:8001 "GET /schema?source_id=d4df49c4-0fcd-4145-b852-ff889d3e4842 HTTP/1.1" 200 631
+DEBUG:urllib3.connectionpool:http://127.0.0.1:8001 "GET /schema?source_id=0ff6daa0-ac80-4e28-87b3-a7fd5cc8eb38 HTTP/1.1" 200 193
+
+🧠 RAW RESULT OBJECT:
+```json
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "joins": [
+    {
+      "type": "inner",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "dim_product",
+      "on": [
+        {
+          "left": {
+            "column": "product_id",
+            "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+            "table": "fact_transaction"
+          },
+          "right": {
+            "column": "product_id",
+            "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+            "table": "dim_product"
+          }
+        }
+      ]
+    }
+  ],
+  "select": [
+    {
+      "expr": {
+        "column": "product_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "product_name",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "dim_product",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "type": "aggregate",
+        "func": "count",
+        "arg": {
+          "column": "transaction_id",
+          "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+          "table": "fact_transaction",
+          "type": "column"
+        }
+      },
+      "alias": "transaction_count"
+    }
+  ],
+  "group_by": [
+    {
+      "column": "product_id",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "fact_transaction",
+      "type": "column"
+    },
+    {
+      "column": "product_name",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "dim_product",
+      "type": "column"
+    }
+  ],
+  "order_by": [
+    {
+      "alias": "transaction_count",
+      "asc": false
+    }
+  ],
+  "limit": 1
+}
+```
+
+══════════════════════════════════════════════════════════════════════════════════════════
+⚠️ Hasil fallback (bukan objek IRQuery):
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "joins": [
+    {
+      "type": "inner",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "dim_product",
+      "on": [
+        {
+          "left": {
+            "column": "product_id",
+            "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+            "table": "fact_transaction"
+          },
+          "right": {
+            "column": "product_id",
+            "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+            "table": "dim_product"
+          }
+        }
+      ]
+    }
+  ],
+  "select": [
+    {
+      "expr": {
+        "column": "product_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "product_name",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "dim_product",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "type": "aggregate",
+        "func": "count",
+        "arg": {
+          "column": "transaction_id",
+          "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+          "table": "fact_transaction",
+          "type": "column"
+        }
+      },
+      "alias": "transaction_count"
+    }
+  ],
+  "group_by": [
+    {
+      "column": "product_id",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "fact_transaction",
+      "type": "column"
+    },
+    {
+      "column": "product_name",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "dim_product",
+      "type": "column"
+    }
+  ],
+  "order_by": [
+    {
+      "alias": "transaction_count",
+      "asc": false
+    }
+  ],
+  "limit": 1
+}
+══════════════════════════════════════════════════════════════════════════════════════════
+
+#4
+(try-agent-llamaindex) afni@afni:~/try-agent-llamaindex$ uv run python agent.py
+DEBUG:httpcore.connection:connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=None socket_options=None
+DEBUG:httpcore.connection:connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x72024d52fe90>
+DEBUG:httpcore.connection:start_tls.started ssl_context=<ssl.SSLContext object at 0x72024d6f7ed0> server_hostname='generativelanguage.googleapis.com' timeout=None
+DEBUG:httpcore.connection:start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x72024d58bc50>
+DEBUG:httpcore.http11:send_request_headers.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:send_request_headers.complete
+DEBUG:httpcore.http11:send_request_body.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:send_request_body.complete
+DEBUG:httpcore.http11:receive_response_headers.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Mon, 02 Mar 2026 08:36:26 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=29'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+INFO:httpx:HTTP Request: GET https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash "HTTP/1.1 200 OK"
+DEBUG:httpcore.http11:receive_response_body.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:receive_response_body.complete
+DEBUG:httpcore.http11:response_closed.started
+DEBUG:httpcore.http11:response_closed.complete
+DEBUG:asyncio:Using selector: EpollSelector
+╔════════════════════════════════════════════════════════════╗
+║ Semesta IR Builder Agent – Gemini 2.5 Flash (DEBUG MODE)   ║
+║                                                            ║
+║ Ketik 'exit', 'keluar', 'quit', 'q' untuk berhenti         ║
+╚════════════════════════════════════════════════════════════╝
+
+Query kamu: tampilkan kolom diskon dari fact_transaction
+
+Agent sedang memproses...
+
+
+ TOOL DIPANGGIL source_id=d4df49c4-0fcd-4145-b852-ff889d3e4842
+
+
+ TOOL DIPANGGIL source_id=0ff6daa0-ac80-4e28-87b3-a7fd5cc8eb38
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:8001
+
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:8001
+DEBUG:urllib3.connectionpool:http://127.0.0.1:8001 "GET /schema?source_id=d4df49c4-0fcd-4145-b852-ff889d3e4842 HTTP/1.1" 200 631
+DEBUG:urllib3.connectionpool:http://127.0.0.1:8001 "GET /schema?source_id=0ff6daa0-ac80-4e28-87b3-a7fd5cc8eb38 HTTP/1.1" 200 193
+
+RAW RESULT OBJECT:
+```json
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "discount_amount",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    }
+  ]
+}
+```
+
+══════════════════════════════════════════════════════════════════════════════════════════
+⚠️ Hasil fallback (bukan objek IRQuery):
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "discount_amount",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    }
+  ]
+}
+══════════════════════════════════════════════════════════════════════════════════════════
+
+#5
+try-agent-llamaindex) afni@afni:~/try-agent-llamaindex$ uv run python agent.py
+DEBUG:httpcore.connection:connect_tcp.started host='generativelanguage.googleapis.com' port=443 local_address=None timeout=None socket_options=None
+DEBUG:httpcore.connection:connect_tcp.complete return_value=<httpcore._backends.sync.SyncStream object at 0x79d5b4ab8800>
+DEBUG:httpcore.connection:start_tls.started ssl_context=<ssl.SSLContext object at 0x79d5b4bfbed0> server_hostname='generativelanguage.googleapis.com' timeout=None
+DEBUG:httpcore.connection:start_tls.complete return_value=<httpcore._backends.sync.SyncStream object at 0x79d5b4ba9940>
+DEBUG:httpcore.http11:send_request_headers.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:send_request_headers.complete
+DEBUG:httpcore.http11:send_request_body.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:send_request_body.complete
+DEBUG:httpcore.http11:receive_response_headers.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Content-Type', b'application/json; charset=UTF-8'), (b'Vary', b'Origin'), (b'Vary', b'X-Origin'), (b'Vary', b'Referer'), (b'Content-Encoding', b'gzip'), (b'Date', b'Mon, 02 Mar 2026 08:45:28 GMT'), (b'Server', b'scaffolding on HTTPServer2'), (b'X-XSS-Protection', b'0'), (b'X-Frame-Options', b'SAMEORIGIN'), (b'X-Content-Type-Options', b'nosniff'), (b'Server-Timing', b'gfet4t7; dur=38'), (b'Alt-Svc', b'h3=":443"; ma=2592000,h3-29=":443"; ma=2592000'), (b'Transfer-Encoding', b'chunked')])
+INFO:httpx:HTTP Request: GET https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash "HTTP/1.1 200 OK"
+DEBUG:httpcore.http11:receive_response_body.started request=<Request [b'GET']>
+DEBUG:httpcore.http11:receive_response_body.complete
+DEBUG:httpcore.http11:response_closed.started
+DEBUG:httpcore.http11:response_closed.complete
+DEBUG:asyncio:Using selector: EpollSelector
+╔════════════════════════════════════════════════════════════╗
+║ Semesta IR Builder Agent – Gemini 2.5 Flash (DEBUG MODE)   ║
+║                                                            ║
+║ Ketik 'exit', 'keluar', 'quit', 'q' untuk berhenti         ║
+╚════════════════════════════════════════════════════════════╝
+
+Query kamu: tampilkan tiga data amount terbanyak pada data fact_transaction
+
+Agent sedang memproses...
+
+
+ TOOL DIPANGGIL source_id=d4df49c4-0fcd-4145-b852-ff889d3e4842
+
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:8001
+DEBUG:urllib3.connectionpool:http://127.0.0.1:8001 "GET /schema?source_id=d4df49c4-0fcd-4145-b852-ff889d3e4842 HTTP/1.1" 200 631
+
+RAW RESULT OBJECT:
+```json
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "total_amount",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    }
+  ],
+  "order_by": [
+    {
+      "column": "total_amount",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "fact_transaction",
+      "asc": false
+    }
+  ],
+  "limit": 3
+}
+```
+
+══════════════════════════════════════════════════════════════════════════════════════════
+⚠️ Hasil fallback (bukan objek IRQuery):
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "total_amount",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    }
+  ],
+  "order_by": [
+    {
+      "column": "total_amount",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "fact_transaction",
+      "asc": false
+    }
+  ],
+  "limit": 3
+}
+══════════════════════════════════════════════════════════════════════════════════════════
+
+Query kamu: berapa rata-rata amount data tersebut?
+
+Agent sedang memproses...
+
+
+ TOOL DIPANGGIL source_id=d4df49c4-0fcd-4145-b852-ff889d3e4842
+
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:8001
+DEBUG:urllib3.connectionpool:http://127.0.0.1:8001 "GET /schema?source_id=d4df49c4-0fcd-4145-b852-ff889d3e4842 HTTP/1.1" 200 631
+
+RAW RESULT OBJECT:
+```json
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "select": [
+    {
+      "expr": {
+        "type": "aggregate",
+        "func": "avg",
+        "arg": {
+          "type": "column",
+          "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+          "table": "fact_transaction",
+          "column": "total_amount"
+        }
+      },
+      "alias": "average_amount"
+    }
+  ]
+}
+```
+
+══════════════════════════════════════════════════════════════════════════════════════════
+⚠️ Hasil fallback (bukan objek IRQuery):
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "select": [
+    {
+      "expr": {
+        "type": "aggregate",
+        "func": "avg",
+        "arg": {
+          "type": "column",
+          "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+          "table": "fact_transaction",
+          "column": "total_amount"
+        }
+      },
+      "alias": "average_amount"
+    }
+  ]
+}
+══════════════════════════════════════════════════════════════════════════════════════════
+
+#selasa 3 maret
+
+Query kamu: tampilkan tiga amount data teratas di fact_transaction
+
+Agent sedang memproses...
+
+
+ TOOL DIPANGGIL source_id=d4df49c4-0fcd-4145-b852-ff889d3e4842
+
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): 127.0.0.1:8001
+════════════════════════════════════════════════════════════════════════════════
+IR DISIMPAN:
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "total_amount",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    }
+  ],
+  "order_by": [
+    {
+      "column": "total_amount",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "fact_transaction",
+      "asc": false
+    }
+  ],
+  "limit": 3
+}
+════════════════════════════════════════════════════════════════════════════════
+
+Query kamu: tampilin satu data aja deh
+
+Agent sedang memproses...
+
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[Intent detected: MODIFY]
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+════════════════════════════════════════════════════════════════════════════════
+DIFF DITERIMA:
+@@
+-  "limit": 3
++  "limit": 1
+════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════
+IR UPDATED:
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "fact_transaction"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "total_amount",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "fact_transaction",
+        "type": "column"
+      }
+    }
+  ],
+  "order_by": [
+    {
+      "column": "total_amount",
+      "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+      "table": "fact_transaction",
+      "asc": false
+    }
+  ],
+  "limit": 1
+}
+════════════════════════════════════════════════════════════════════════════════
+
+Query kamu: tampilkan seluruh data brand
+
+Agent sedang memproses...
+
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[Intent detected: NEW]
+════════════════════════════════════════════════════════════════════════════════
+IR DISIMPAN:
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "dim_brand"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "brand_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "dim_brand",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "brand_name",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "dim_brand",
+        "type": "column"
+      }
+    }
+  ]
+}
+════════════════════════════════════════════════════════════════════════════════
+
+Query kamu: data amount tadi tampilin 5 terbawah
+
+Agent sedang memproses...
+
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+[Intent detected: MODIFY]
+INFO:google_genai.models:AFC is enabled with max remote calls: 10.
+════════════════════════════════════════════════════════════════════════════════
+DIFF DITERIMA:
+@@ -27,4 +27,20 @@
+         "table": "dim_brand",
+         "type": "column"
+       }
+-    }
++    },
++    {
++      "expr": {
++        "column": "brand_id",
++        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
++        "table": "dim_brand",
++        "type": "column"
++      },
++      "direction": "asc"
++    }
++  ],
++  "order_by": [
++    {
++      "expr": {
++        "column": "brand_id",
++        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
++        "table": "dim_brand",
++        "type": "column"
++      },
++      "direction": "asc"
++    }
++  ],
++  "limit": 5
+════════════════════════════════════════════════════════════════════════════════
+════════════════════════════════════════════════════════════════════════════════
+IR UPDATED:
+{
+  "from": {
+    "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+    "table": "dim_brand"
+  },
+  "select": [
+    {
+      "expr": {
+        "column": "brand_id",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "dim_brand",
+        "type": "column"
+      }
+    },
+    {
+      "expr": {
+        "column": "brand_name",
+        "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+        "table": "dim_brand",
+        "type": "column"
+      }
+    }
+  ],
+  "expr": "{",
+  "column": "brand_id",
+  "source_id": "d4df49c4-0fcd-4145-b852-ff889d3e4842",
+  "table": "dim_brand",
+  "type": "column",
+  "direction": "asc",
+  "order_by": "[",
+  "limit": 5
+}
+════════════════════════════════════════════════════════════════════════════════

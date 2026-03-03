@@ -5,18 +5,31 @@ load_dotenv()
 import asyncio
 import json
 import logging
+import re
 
 import requests
 from llama_index.core.agent import AgentWorkflow, FunctionAgent
 from llama_index.core.tools import FunctionTool
 from llama_index.llms.google_genai import GoogleGenAI
 
-# LOGGING (DEBUG MODE AKTIF)
+# =============================
+# LOGGING
+# =============================
 logging.basicConfig(level=logging.DEBUG)
 logging.getLogger("llama_index").setLevel(logging.DEBUG)
 
+# =============================
+# GLOBAL STATE
+# =============================
+# biar tau ir json terakhir (biar bisa dimodifikasi)
+current_ir = None
+# simpan sementara seluruh ir, biar bisa pilih ir mana yang mau dimodifikasi
+ir_history = []
 
-# Import validator Pydantic
+# =============================
+# LOAD IR MODEL
+# =============================
+# cek apakah ir udah sesuai json apa belum
 try:
     from models import IRQuery
 except ImportError:
@@ -24,14 +37,18 @@ except ImportError:
     IRQuery = None
 
 
-# SETUP LLM GEMINI
+# =============================
+# LLM SETUP
+# =============================
 llm = GoogleGenAI(
     model="gemini-2.5-flash",
     temperature=0.0,
 )
 
 
-# TOOL: Fetch schema dari dummy API
+# =============================
+# TOOL: FETCH SCHEMA
+# =============================
 def fetch_dwh_schema(source_id: str) -> str:
     print(f"\n TOOL DIPANGGIL source_id={source_id}\n")
 
@@ -65,91 +82,272 @@ def fetch_dwh_schema(source_id: str) -> str:
 fetch_schema_tool = FunctionTool.from_defaults(fn=fetch_dwh_schema)
 
 
-# SYSTEM PROMPT
+# =============================
+# LOAD PROMPTS
+# =============================
+# system prompt utama untuk ngeluarin output json
 try:
     with open("system_prompt.txt", "r", encoding="utf-8") as f:
         system_prompt = f.read().strip()
 except FileNotFoundError:
-    print("Warning: system_prompt.txt tidak ditemukan!")
-    system_prompt = "You are a helpful assistant that outputs only valid JSON IR query."
+    system_prompt = """
+You are an IR builder.
+
+Return ONLY raw JSON.
+Do NOT wrap in markdown.
+Do NOT use ```json.
+"""
+
+# system prompt untuk mengedit bagian dari json, sesuai permintaan
+try:
+    with open("edit_system_prompt.txt", "r", encoding="utf-8") as f:
+        edit_system_prompt = f.read().strip()
+except FileNotFoundError:
+    edit_system_prompt = """
+You are an IR diff editor.
+
+Return ONLY unified diff.
+Do NOT wrap in markdown.
+"""
+
+# system prompt untuk cek apakah ini perintah baru atau perintah sebelumnya yang bisa dimodifikasi
+try:
+    with open("classifier_system_prompt.txt", "r", encoding="utf-8") as f:
+        classifier_system_prompt = f.read().strip()
+except FileNotFoundError:
+    classifier_system_prompt = """
+You are a query intent classifier.
+
+Return ONLY:
+NEW
+or
+MODIFY
+"""
 
 
-# AGENT SETUP (VERBOSE AKTIF)
+# =============================
+# AGENTS
+# =============================
+
+# agent utama ambil data
 agent = FunctionAgent(
     llm=llm,
     tools=[fetch_schema_tool],
     system_prompt=system_prompt,
-    verbose=True,  # ⬅️ penting buat lihat reasoning loop
+    verbose=True,
     output_cls=IRQuery,
 )
 
 workflow = AgentWorkflow(agents=[agent])
 
+# agent untuk edit system prompt
+edit_agent = FunctionAgent(
+    llm=llm,
+    system_prompt=edit_system_prompt,
+    verbose=True,
+)
 
-# MAIN LOOP – TERMINAL CHAT
+edit_workflow = AgentWorkflow(agents=[edit_agent])
+
+# agent untuk klasifikasi ini permintaan baru atau lama
+classifier_agent = FunctionAgent(
+    llm=llm,
+    system_prompt=classifier_system_prompt,
+    verbose=False,
+)
+
+classifier_workflow = AgentWorkflow(agents=[classifier_agent])
+
+
+# =============================
+# CLEAN JSON HELPER
+# =============================
+def clean_json_output(text: str) -> str:
+    text = text.strip()
+
+    # Remove ```json or ``` wrappers
+    text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
+    text = re.sub(r"\n?```$", "", text)
+
+    return text.strip()
+
+
+# =============================
+# CLASSIFY INTENT FUNCTION
+# =============================
+async def classify_intent(user_input: str) -> str:
+    result = await classifier_workflow.run(user_msg=user_input)
+
+    output = ""
+    if hasattr(result, "content"):
+        output = result.content.strip().upper()
+    else:
+        output = str(result).strip().upper()
+
+    if "MODIFY" in output:
+        return "MODIFY"
+
+    return "NEW"
+
+
+# =============================
+# DIFF PATCHER (SIMPLE)
+# =============================
+def apply_simple_json_diff(current_json: dict, diff_text: str) -> dict:
+    lines = diff_text.splitlines()
+
+    for line in lines:
+        if line.startswith("+") and not line.startswith("+++"):
+            new_line = line[1:].strip().rstrip(",")
+
+            match = re.match(r'"(.+?)"\s*:\s*(.+)', new_line)
+            if match:
+                key = match.group(1)
+                value_raw = match.group(2)
+
+                try:
+                    value = json.loads(value_raw)
+                except:
+                    value = value_raw.strip('"')
+
+                current_json[key] = value
+
+    return current_json
+
+
+# =============================
+# MAIN LOOP
+# =============================
 async def main():
-    print("╔════════════════════════════════════════════════════════════╗")
-    print("║ Semesta IR Builder Agent – Gemini 2.5 Flash (DEBUG MODE)   ║")
-    print("║                                                            ║")
-    print("║ Ketik 'exit', 'keluar', 'quit', 'q' untuk berhenti         ║")
-    print("╚════════════════════════════════════════════════════════════╝")
+    global current_ir
+
+    print("╔════════════════════════════════════════════════════╗")
+    print("║ IR Builder                                         ║")
+    print("╚════════════════════════════════════════════════════╝")
 
     while True:
-        user_input = input("\nQuery kamu: ").strip()
+        user_input = input("\nQuery: ").strip()
 
-        if user_input.lower() in ["exit", "keluar", "quit", "q"]:
-            print("\nTerima kasih!")
+        if user_input.lower() in ["exit", "quit", "q"]:
+            print("\nSelesai.")
             break
 
+        if user_input.lower() == "reset":
+            current_ir = None
+            print("IR state direset.")
+            continue
+
+        # =============================
+        # COMMAND: SHOW HISTORY
+        # =============================
+        if user_input.lower() == "history":
+            print("\n=== IR HISTORY ===")
+            for idx, ir in enumerate(ir_history):
+                print(f"\n[{idx}]")
+                print(json.dumps(ir, indent=2))
+            print("\nCurrent IR:")
+            print(json.dumps(current_ir, indent=2) if current_ir else "None")
+            continue
+
+        # =============================
+        # COMMAND: UNDO
+        # =============================
+        if user_input.lower() == "undo":
+            if ir_history:
+                current_ir = ir_history.pop()
+                print("\n↩️ Reverted to previous IR:")
+                print(json.dumps(current_ir, indent=2))
+            else:
+                print("History kosong.")
+            continue
+
         if not user_input:
-            print("Masukkan query.")
             continue
 
         print("\nAgent sedang memproses...\n")
 
         try:
-            result = await workflow.run(user_msg=user_input)
+            # =============================
+            # INTENT CLASSIFICATION
+            # =============================
+            intent = "NEW"
 
-            print("\nRAW RESULT OBJECT:")
-            print(result)
-            print()
+            if current_ir is not None:
+                intent = await classify_intent(user_input)
+                print(f"[Intent detected: {intent}]")
 
-            if (
-                IRQuery is not None
-                and hasattr(result, "response")
-                and isinstance(result.response, IRQuery)
-            ):
-                ir_obj = result.response
-                output_json = ir_obj.model_dump_json(indent=2)
+            # =============================
+            # MODE 1 – GENERATE IR
+            # =============================
+            if current_ir is None or intent == "NEW":
+                result = await workflow.run(user_msg=user_input)
 
-                print("═" * 90)
-                print("JSON IR VALID (Pydantic validated):")
-                print(output_json)
-                print("═" * 90)
-
-            else:
-                output = ""
+                # Ambil raw text
+                raw_output = ""
                 if hasattr(result, "content"):
-                    output = result.content or ""
+                    raw_output = result.content or ""
                 elif hasattr(result, "message") and hasattr(result.message, "content"):
-                    output = result.message.content or ""
+                    raw_output = result.message.content or ""
                 else:
-                    output = str(result)
+                    raw_output = str(result)
 
-                output = output.strip()
+                cleaned = clean_json_output(raw_output)
 
-                if output.startswith("```json"):
-                    output = output[7:].lstrip()
-                if output.endswith("```"):
-                    output = output[:-3].rstrip()
+                try:
+                    parsed_json = json.loads(cleaned)
 
-                print("═" * 90)
-                print("⚠️ Hasil fallback (bukan objek IRQuery):")
-                print(output)
-                print("═" * 90)
+                    if current_ir is not None:
+                        ir_history.append(current_ir)
+
+                    current_ir = parsed_json
+
+                    print("═" * 80)
+                    print("IR DISIMPAN:")
+                    print(json.dumps(current_ir, indent=2))
+                    print("═" * 80)
+
+                except Exception as e:
+                    print("❌ Gagal parse JSON:")
+                    print(cleaned)
+                    print("Error:", e)
+
+            # =============================
+            # MODE 2 – EDIT IR (DIFF)
+            # =============================
+            else:
+                edit_prompt = f"""
+Current IR:
+{json.dumps(current_ir, indent=2)}
+
+User modification request:
+{user_input}
+"""
+
+                diff_result = await edit_workflow.run(user_msg=edit_prompt)
+
+                raw_diff = ""
+                if hasattr(diff_result, "content"):
+                    raw_diff = diff_result.content or ""
+                else:
+                    raw_diff = str(diff_result)
+
+                cleaned_diff = clean_json_output(raw_diff)
+
+                print("═" * 80)
+                print("DIFF DITERIMA:")
+                print(cleaned_diff)
+                print("═" * 80)
+
+                ir_history.append(current_ir.copy())
+                current_ir = apply_simple_json_diff(current_ir, cleaned_diff)
+
+                print("═" * 80)
+                print("IR UPDATED:")
+                print(json.dumps(current_ir, indent=2))
+                print("═" * 80)
 
         except Exception as e:
-            print(f"\n❌ Terjadi error: {str(e)}")
+            print(f"\n❌ Error: {e}")
 
 
 if __name__ == "__main__":
