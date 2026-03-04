@@ -173,6 +173,18 @@ def clean_json_output(text: str) -> str:
 
 
 # =============================
+# DEEP MERGE
+# =============================
+def deep_merge(base: dict, changes: dict) -> dict:
+    for key, value in changes.items():
+        if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+            base[key] = deep_merge(base[key], value)
+        else:
+            base[key] = value
+    return base
+
+
+# =============================
 # CLASSIFY INTENT FUNCTION
 # =============================
 async def classify_intent(user_input: str) -> dict:
@@ -218,29 +230,29 @@ User Query:
         return {"mode": "NEW", "target_index": None}
 
 
-# =============================
-# DIFF PATCHER (SIMPLE)
-# =============================
-def apply_simple_json_diff(current_json: dict, diff_text: str) -> dict:
-    lines = diff_text.splitlines()
+# # =============================
+# # DIFF PATCHER (SIMPLE)
+# # =============================
+# def apply_simple_json_diff(current_json: dict, diff_text: str) -> dict:
+#     lines = diff_text.splitlines()
 
-    for line in lines:
-        if line.startswith("+") and not line.startswith("+++"):
-            new_line = line[1:].strip().rstrip(",")
+#     for line in lines:
+#         if line.startswith("+") and not line.startswith("+++"):
+#             new_line = line[1:].strip().rstrip(",")
 
-            match = re.match(r'"(.+?)"\s*:\s*(.+)', new_line)
-            if match:
-                key = match.group(1)
-                value_raw = match.group(2)
+#             match = re.match(r'"(.+?)"\s*:\s*(.+)', new_line)
+#             if match:
+#                 key = match.group(1)
+#                 value_raw = match.group(2)
 
-                try:
-                    value = json.loads(value_raw)
-                except:
-                    value = value_raw.strip('"')
+#                 try:
+#                     value = json.loads(value_raw)
+#                 except:
+#                     value = value_raw.strip('"')
 
-                current_json[key] = value
+#                 current_json[key] = value
 
-    return current_json
+#     return current_json
 
 
 # =============================
@@ -343,10 +355,9 @@ async def main():
                     print("Error:", e)
 
             # =============================
-            # MODE 2 – EDIT IR (DIFF)
+            # MODE 2 – EDIT IR (SEMANTIC)
             # =============================
             else:
-                # Tentukan IR dasar
                 base_ir = current_ir
 
                 if mode == "MODIFY_REFERENCE":
@@ -366,28 +377,83 @@ async def main():
             {user_input}
             """
 
-                diff_result = await edit_workflow.run(user_msg=edit_prompt)
+                edit_result = await edit_workflow.run(user_msg=edit_prompt)
 
-                raw_diff = ""
-                if hasattr(diff_result, "content"):
-                    raw_diff = diff_result.content or ""
+                raw_output = ""
+                if hasattr(edit_result, "content"):
+                    raw_output = edit_result.content or ""
                 else:
-                    raw_diff = str(diff_result)
+                    raw_output = str(edit_result)
 
-                cleaned_diff = clean_json_output(raw_diff)
-
-                print("═" * 80)
-                print("DIFF DITERIMA:")
-                print(cleaned_diff)
-                print("═" * 80)
-
-                ir_history.append(current_ir.copy())
-                current_ir = apply_simple_json_diff(base_ir.copy(), cleaned_diff)
+                cleaned = clean_json_output(raw_output)
 
                 print("═" * 80)
-                print("IR UPDATED:")
-                print(json.dumps(current_ir, indent=2))
+                print("SEMANTIC PATCH DITERIMA:")
+                print(cleaned)
                 print("═" * 80)
+
+                try:
+                    changes = json.loads(cleaned)
+
+                    ir_history.append(current_ir.copy())
+                    current_ir = deep_merge(base_ir.copy(), changes)
+
+                    print("═" * 80)
+                    print("IR UPDATED:")
+                    print(json.dumps(current_ir, indent=2))
+                    print("═" * 80)
+
+                except Exception as e:
+                    print("❌ Gagal parse semantic edit JSON:")
+                    print(cleaned)
+                    print("Error:", e)
+
+            # # =============================
+            # # MODE 2 – EDIT IR (DIFF)
+            # # =============================
+            # else:
+            #     # Tentukan IR dasar
+            #     base_ir = current_ir
+
+            #     if mode == "MODIFY_REFERENCE":
+            #         if isinstance(target_index, int) and 0 <= target_index < len(
+            #             ir_history
+            #         ):
+            #             base_ir = ir_history[target_index]
+            #             print(f"[Menggunakan IR index {target_index} sebagai base]")
+            #         else:
+            #             print("[Index tidak valid → fallback ke current_ir]")
+
+            #     edit_prompt = f"""
+            # Current IR:
+            # {json.dumps(base_ir, indent=2)}
+
+            # User modification request:
+            # {user_input}
+            # """
+
+            #     diff_result = await edit_workflow.run(user_msg=edit_prompt)
+
+            #     raw_diff = ""
+            #     if hasattr(diff_result, "content"):
+            #         raw_diff = diff_result.content or ""
+            #     else:
+            #         raw_diff = str(diff_result)
+
+            #     cleaned_diff = clean_json_output(raw_diff)
+
+            #     print("═" * 80)
+            #     print("DIFF DITERIMA:")
+            #     print(cleaned_diff)
+            #     print("═" * 80)
+
+            #     ir_history.append(current_ir.copy())
+            #     current_ir = apply_simple_json_diff(base_ir.copy(), cleaned_diff)
+
+            #     print("═" * 80)
+            #     print("IR UPDATED:")
+            #     print(json.dumps(current_ir, indent=2))
+            #     print("═" * 80)
 
         except Exception as e:
             print(f"\n❌ Error: {e}")
