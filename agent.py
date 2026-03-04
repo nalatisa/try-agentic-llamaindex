@@ -175,19 +175,47 @@ def clean_json_output(text: str) -> str:
 # =============================
 # CLASSIFY INTENT FUNCTION
 # =============================
-async def classify_intent(user_input: str) -> str:
-    result = await classifier_workflow.run(user_msg=user_input)
+async def classify_intent(user_input: str) -> dict:
+    # Buat ringkasan history (cukup tabel + limit)
+    history_summary = []
 
-    output = ""
+    for idx, ir in enumerate(ir_history):
+        table = ir.get("from", {}).get("table")
+        limit = ir.get("limit")
+        history_summary.append({"index": idx, "table": table, "limit": limit})
+
+    last_ir_summary = None
+    if current_ir:
+        last_ir_summary = {
+            "table": current_ir.get("from", {}).get("table"),
+            "limit": current_ir.get("limit"),
+        }
+
+    classifier_prompt = f"""
+IR History:
+{json.dumps(history_summary, indent=2)}
+
+Last IR:
+{json.dumps(last_ir_summary, indent=2)}
+
+User Query:
+{user_input}
+"""
+
+    result = await classifier_workflow.run(user_msg=classifier_prompt)
+
+    raw_output = ""
     if hasattr(result, "content"):
-        output = result.content.strip().upper()
+        raw_output = result.content.strip()
     else:
-        output = str(result).strip().upper()
+        raw_output = str(result).strip()
 
-    if "MODIFY" in output:
-        return "MODIFY"
+    cleaned = clean_json_output(raw_output)
 
-    return "NEW"
+    try:
+        return json.loads(cleaned)
+    except:
+        return {"mode": "NEW", "target_index": None}
 
 
 # =============================
@@ -270,16 +298,19 @@ async def main():
             # =============================
             # INTENT CLASSIFICATION
             # =============================
-            intent = "NEW"
+            intent_data = {"mode": "NEW", "target_index": None}
 
             if current_ir is not None:
-                intent = await classify_intent(user_input)
-                print(f"[Intent detected: {intent}]")
+                intent_data = await classify_intent(user_input)
+                print(f"[Intent detected: {intent_data}]")
+
+            mode = intent_data.get("mode", "NEW")
+            target_index = intent_data.get("target_index")
 
             # =============================
             # MODE 1 – GENERATE IR
             # =============================
-            if current_ir is None or intent == "NEW":
+            if current_ir is None or mode == "NEW":
                 result = await workflow.run(user_msg=user_input)
 
                 # Ambil raw text
@@ -315,13 +346,25 @@ async def main():
             # MODE 2 – EDIT IR (DIFF)
             # =============================
             else:
-                edit_prompt = f"""
-Current IR:
-{json.dumps(current_ir, indent=2)}
+                # Tentukan IR dasar
+                base_ir = current_ir
 
-User modification request:
-{user_input}
-"""
+                if mode == "MODIFY_REFERENCE":
+                    if isinstance(target_index, int) and 0 <= target_index < len(
+                        ir_history
+                    ):
+                        base_ir = ir_history[target_index]
+                        print(f"[Menggunakan IR index {target_index} sebagai base]")
+                    else:
+                        print("[Index tidak valid → fallback ke current_ir]")
+
+                edit_prompt = f"""
+            Current IR:
+            {json.dumps(base_ir, indent=2)}
+
+            User modification request:
+            {user_input}
+            """
 
                 diff_result = await edit_workflow.run(user_msg=edit_prompt)
 
@@ -339,7 +382,7 @@ User modification request:
                 print("═" * 80)
 
                 ir_history.append(current_ir.copy())
-                current_ir = apply_simple_json_diff(current_ir, cleaned_diff)
+                current_ir = apply_simple_json_diff(base_ir.copy(), cleaned_diff)
 
                 print("═" * 80)
                 print("IR UPDATED:")

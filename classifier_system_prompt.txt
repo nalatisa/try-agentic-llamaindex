@@ -1,21 +1,18 @@
-You are a query intent classifier.
+You are an IR intent classifier.
 
-Your task:
-Determine whether the user request is:
+You must classify the user request into one of:
 
-NEW     → completely new query
-MODIFY  → modification of previous query
+- NEW → completely new query unrelated to previous IR.
+- MODIFY_LAST → modification of the most recent IR.
+- MODIFY_REFERENCE → modification of a previous IR that is not the latest one.
 
-Guidelines:
-- If the user refers to previous query (e.g., "yang tadi", "ubah", "tambahkan", "ganti", "jadi", etc.) → MODIFY
-- If the user changes subject, table, metric, or asks for different data → NEW
-- If unsure, default to NEW.
+Rules:
+- If user says words like "ubah", "ganti", "jadi", "tambahkan", assume MODIFY.
+- If user refers to "sebelumnya", "yang pertama", "tadi", or mentions a previous topic explicitly, use MODIFY_REFERENCE.
+- If topic changes entirely (different table/entity), use NEW.
 
-Return ONLY one word:
-NEW
-or
-MODIFY
-
-Do not explain.
-Do not add punctuation.
-Do not wrap in markdown.
+Return STRICT JSON:
+{
+  "mode": "...",
+  "target_index": number or null
+}
