@@ -3,3 +3,8 @@ __pycache__/
 .python-version
 *.env
 uv.lock
+python/__pycache__/
+dummydatabase/__pycache__/
+python/.chainlit/
+python/chainlit.md
+agent.py

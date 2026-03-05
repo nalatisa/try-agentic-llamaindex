@@ -1,5 +1,6 @@
 # models.py
-from typing import Any, List, Literal, Optional, Union
+# struktur json untuk validasi
+from typing import Any, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -17,7 +18,7 @@ class LiteralExpr(BaseModel):
 
 
 class SelectItem(BaseModel):
-    expr: Any  # Union[ColumnRef, AggregateExpr, ...] – simplified
+    expr: Any
     alias: Optional[str] = None
 
 
